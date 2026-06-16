@@ -31,6 +31,7 @@ export default function Profile() {
   const [codigoEnlace, setCodigoEnlace] = useState('');
   const [operadores, setOperadores] = useState<any[]>([]);
   const [usuarioActual, setUsuarioActual] = useState<any>(null);
+  const [revelarClaves, setRevelarClaves] = useState(false);
   const appState = useRef(AppState.currentState);
 
   useFocusEffect(
@@ -187,7 +188,15 @@ export default function Profile() {
             <Text style={styles.bleBtnText}>VER BITÁCORA DE OPERACIONES</Text>
           </Pressable>
 
-          <Text style={[styles.sectionTitle, { marginTop: spacing.xl }]}>DISPOSITIVOS ({devices.length})</Text>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: spacing.xl, marginBottom: spacing.sm }}>
+            <Text style={[styles.sectionTitle, { marginTop: 0, marginBottom: 0 }]}>DISPOSITIVOS ({devices.length})</Text>
+            <Pressable onPress={() => setRevelarClaves(!revelarClaves)} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Ionicons name={revelarClaves ? "eye-off-outline" : "eye-outline"} size={16} color={colors.brand} />
+              <Text style={{ color: colors.brand, fontFamily: fontFamily.displayBold, fontSize: 10, letterSpacing: 1 }}>
+                {revelarClaves ? "OCULTAR CLAVES" : "MOSTRAR CLAVES"}
+              </Text>
+            </Pressable>
+          </View>
           {devices.length === 0 ? (
             <Text style={styles.empty}>No tienes dispositivos vinculados aún.</Text>
           ) : null}
@@ -211,7 +220,7 @@ export default function Profile() {
                   <Text style={styles.kvLabel}>DEVICE ID</Text>
                   <Pressable onPress={() => copy(d.id, "id-" + d.id)} testID={`copy-id-${d.id}`}>
                     <Text style={styles.kvValueMono}>
-                      {d.id} {copied === "id-" + d.id ? "✓" : "⧉"}
+                      {revelarClaves ? d.id : "••••••••-••••-••••-••••-••••••••••••"} {copied === "id-" + d.id ? "✓" : "⧉"}
                     </Text>
                   </Pressable>
                 </View>
@@ -219,7 +228,7 @@ export default function Profile() {
                   <Text style={styles.kvLabel}>API KEY</Text>
                   <Pressable onPress={() => copy(d.api_key, "k-" + d.id)} testID={`copy-key-${d.id}`}>
                     <Text style={styles.kvValueMono} numberOfLines={1}>
-                      {d.api_key.slice(0, 14)}… {copied === "k-" + d.id ? "✓" : "⧉"}
+                      {revelarClaves ? d.api_key : "••••••••••••••••••••••••••••••••••••"} {copied === "k-" + d.id ? "✓" : "⧉"}
                     </Text>
                   </Pressable>
                 </View>
@@ -227,7 +236,7 @@ export default function Profile() {
                   <Text style={styles.kvLabel}>API BASE</Text>
                   <Pressable onPress={() => copy(API_BASE, "b-" + d.id)} testID={`copy-base-${d.id}`}>
                     <Text style={styles.kvValueMono} numberOfLines={1}>
-                      {API_BASE.replace(/^https?:\/\//, "")} {copied === "b-" + d.id ? "✓" : "⧉"}
+                      {revelarClaves ? API_BASE.replace(/^https?:\/\//, "") : "••••••••••••••••"} {copied === "b-" + d.id ? "✓" : "⧉"}
                     </Text>
                   </Pressable>
                 </View>
