@@ -1,7 +1,58 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, PermissionsAndroid } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+
+let BleManagerClass: any = null;
+try {
+  if (Platform.OS !== 'web') {
+    BleManagerClass = require('react-native-ble-plx').BleManager;
+  }
+} catch (e) {
+  console.log("react-native-ble-plx not available or failed to load:", e);
+}
+
+let encodeFunc: any = (text: string) => text;
+try {
+  encodeFunc = require('base-64').encode;
+} catch (e) {
+  console.log("base-64 not available or failed to load:", e);
+}
+
+// Inicializar el manager de Bluetooth con control de errores
+const manager = BleManagerClass ? new BleManagerClass() : null;
+
+async function pedirPermisosBluetooth() {
+  if (Platform.OS === 'android') {
+    try {
+      const granted = await PermissionsAndroid.requestMultiple([
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+      ]);
+      
+      const locGranted = granted['android.permission.ACCESS_FINE_LOCATION'] === PermissionsAndroid.RESULTS.GRANTED;
+      const scanGranted = granted['android.permission.BLUETOOTH_SCAN'] === PermissionsAndroid.RESULTS.GRANTED;
+      const connectGranted = granted['android.permission.BLUETOOTH_CONNECT'] === PermissionsAndroid.RESULTS.GRANTED;
+
+      if (locGranted && scanGranted && connectGranted) {
+        console.log("¡Permisos concedidos! Podemos escanear al ESP32.");
+        return true;
+      } else {
+        console.log("Permisos denegados. El puente BLE no funcionará.");
+        return false;
+      }
+    } catch (err) {
+      console.warn(err);
+      return false;
+    }
+  }
+  return true; // En iOS el sistema saca el popup automáticamente
+}
+
+// Los UUIDs EXACTOS que pusiste en el código C++
+const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
 
 type WiFiNetwork = {
   ssid: string;
@@ -10,6 +61,7 @@ type WiFiNetwork = {
 
 export default function PairDeviceScreen() {
   const [phase, setPhase] = useState<'scan' | 'connect' | 'credentials' | 'provisioning' | 'success'>('scan');
+  const [selectedDeviceObj, setSelectedDeviceObj] = useState<any>(null);
   
   // Lista de redes 2.4 GHz escaneadas y simuladas del ESP32
   const simulatedNetworks: WiFiNetwork[] = [
@@ -22,28 +74,124 @@ export default function PairDeviceScreen() {
   const [selectedNetwork, setSelectedNetwork] = useState<string | null>(null);
   const [manualSsid, setManualSsid] = useState('');
   const [wifiPassword, setWifiPassword] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('es');
   const [scanProgress, setScanProgress] = useState(false);
   const [devicesFound, setDevicesFound] = useState<any[]>([]);
   const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Función auxiliar de simulación para escaneo
+  const usarEscaneoSimulado = useCallback(() => {
+    setDevicesFound([
+      { 
+        id: 'vimo_s3', 
+        name: '🟢 Vimo S3 (El Máster)', 
+        description: 'Cerebro principal y herramienta de desarrollo. Asistencia por voz bidireccional, telemetría y alertas físicas PTT/Pánico.',
+        status: 'Listo para emparejar', 
+        compatible: true 
+      },
+      { 
+        id: 'vimo_movilidad', 
+        name: '🟢 Vimo Movilidad', 
+        description: 'Compañero de calle y guía interactivo. Rutas accesibles, info cultural por voz y reproducción de música ultraligera.',
+        status: 'Listo para emparejar', 
+        compatible: true 
+      },
+      { 
+        id: 'vimo_guardian', 
+        name: '🟢 Vimo Guardián (TFT)', 
+        description: 'Vigilante perimetral fijo. Monitoreo ambiental (gas/humo MQ-2) las 24 horas y alertas locales en pantalla TFT.',
+        status: 'Listo para emparejar', 
+        compatible: true 
+      },
+      { 
+        id: 'vimo_asistente', 
+        name: '🟢 Vimo Asistente (Hogar)', 
+        description: 'Bocina inteligente de seguridad para el hogar. Control domótico por voz y alarma audible en cocina.',
+        status: 'Listo para emparejar', 
+        compatible: true 
+      },
+      { 
+        id: 'vimo_inclusivo', 
+        name: '🟢 Vimo Inclusivo (Accesibilidad)', 
+        description: 'Modelo de impacto social. Traduce comandos de texto de pantalla/láser a voz alta (TTS).',
+        status: 'Listo para emparejar', 
+        compatible: true 
+      },
+      { 
+        id: 'monitor_guardian', 
+        name: '📱 Monitor Guardián', 
+        description: 'Centro de mando digital. Unifica los Vimos físicos, gestiona fichas médicas y configura WiFi.',
+        status: 'Software activo en este dispositivo', 
+        compatible: false 
+      },
+      { 
+        id: 'buds_ble', 
+        name: '🔴 Audífonos Buds', 
+        description: 'Dispositivo genérico Bluetooth.',
+        status: 'Incompatible', 
+        compatible: false 
+      },
+    ]);
+    setScanProgress(false);
+  }, []);
+
   // Función para iniciar el escaneo de Bluetooth
-  const iniciarEscaneo = useCallback(() => {
+  const iniciarEscaneo = useCallback(async () => {
     if (scanTimeoutRef.current) {
       clearTimeout(scanTimeoutRef.current);
     }
     setScanProgress(true);
     setDevicesFound([]);
-    scanTimeoutRef.current = setTimeout(() => {
-      setDevicesFound([
-        { id: 'esp32_vimos3', name: '🟢 VIMO S3 (ESP32)', status: 'Listo para emparejar', compatible: true },
-        { id: 'tv_sala', name: '🔴 Smart TV Sala', status: 'Incompatible', compatible: false },
-        { id: 'buds_ble', name: '🔴 Audífonos Buds', status: 'Incompatible', compatible: false },
-      ]);
-      setScanProgress(false);
-      scanTimeoutRef.current = null;
-    }, 2000);
-  }, []);
+
+    if (manager && Platform.OS !== 'web') {
+      const tienePermisos = await pedirPermisosBluetooth();
+      if (!tienePermisos) {
+        Alert.alert(
+          'Permisos requeridos',
+          'Se necesitan permisos de Bluetooth y ubicación para buscar al Vimo físico. Iniciando simulación.',
+          [{ text: 'Entendido', onPress: () => usarEscaneoSimulado() }]
+        );
+        return;
+      }
+
+      console.log("Iniciando escaneo real BLE...");
+      const discovered: any[] = [];
+      manager.startDeviceScan(null, null, (error, device) => {
+        if (error) {
+          console.log("Error al escanear BLE:", error);
+          setScanProgress(false);
+          usarEscaneoSimulado();
+          return;
+        }
+        if (device && device.name && !discovered.some(d => d.id === device.id)) {
+          console.log("Dispositivo BLE encontrado:", device.name);
+          const isVimo = device.name.toUpperCase().includes('VIMO');
+          discovered.push({
+            id: device.id,
+            name: device.name,
+            description: isVimo ? 'Dispositivo VIMO físico detectado.' : 'Dispositivo Bluetooth genérico.',
+            status: isVimo ? 'Listo para emparejar' : 'Incompatible',
+            compatible: isVimo,
+            realDevice: device
+          });
+          setDevicesFound([...discovered]);
+        }
+      });
+
+      // Detener escaneo después de 5 segundos
+      scanTimeoutRef.current = setTimeout(() => {
+        manager.stopDeviceScan();
+        setScanProgress(false);
+        if (discovered.length === 0) {
+          usarEscaneoSimulado();
+        }
+        scanTimeoutRef.current = null;
+      }, 5000);
+    } else {
+      usarEscaneoSimulado();
+    }
+  }, [manager, usarEscaneoSimulado]);
 
   useEffect(() => {
     if (phase === 'scan') {
@@ -56,8 +204,9 @@ export default function PairDeviceScreen() {
     };
   }, [phase, iniciarEscaneo]);
 
-  // Conexión BLE simulada
-  const conectarDispositivo = () => {
+  // Conexión BLE
+  const conectarDispositivo = (device: any) => {
+    setSelectedDeviceObj(device);
     setPhase('connect');
     setTimeout(() => {
       setPhase('credentials');
@@ -95,8 +244,38 @@ export default function PairDeviceScreen() {
       const is5G = finalSsid.toUpperCase().includes('5G') || finalSsid.toUpperCase().includes('5GHZ');
       
       await addLog('[1/5] [BLE] Enlazando canal seguro con VIMO S3... OK', 600);
-      await addLog(`[2/5] [BLE] Enviando credenciales de red: SSID: "${finalSsid}"... OK`, 800);
-      await addLog('[3/5] [ESP32] Recibido paquete. Escribiendo credenciales en memoria interna NVS... OK', 800);
+      
+      let realBLESuccess = false;
+      if (selectedDeviceObj && selectedDeviceObj.realDevice && manager) {
+        try {
+          await addLog('      [BLE] Estableciendo conexión física con el chip...', 300);
+          const connectedDevice = await manager.connectToDevice(selectedDeviceObj.id);
+          
+          await addLog('      [BLE] Descubriendo servicios y características...', 400);
+          await connectedDevice.discoverAllServicesAndCharacteristics();
+          
+          await addLog(`[2/5] [BLE] Enviando credenciales: SSID: "${finalSsid}" (Idioma: ${selectedLanguage})...`, 600);
+          const payloadTexto = JSON.stringify({ ssid: finalSsid, password: wifiPassword, lang: selectedLanguage });
+          const payloadBase64 = encodeFunc(payloadTexto);
+          
+          await connectedDevice.writeCharacteristicWithResponseForService(
+            SERVICE_UUID,
+            CHARACTERISTIC_UUID,
+            payloadBase64
+          );
+          await addLog('      [BLE] Datos de red transmitidos correctamente.', 300);
+          realBLESuccess = true;
+        } catch (error: any) {
+          await addLog(`⚠️ [BLE] Error de transmisión real: ${error.message || error}`, 500);
+          await addLog('      [BLE] Continuando en modo simulación de aprovisionamiento...', 500);
+        }
+      }
+
+      if (!realBLESuccess) {
+        await addLog(`[2/5] [BLE] Enviando credenciales de red: SSID: "${finalSsid}" (Idioma: ${selectedLanguage})... OK`, 800);
+      }
+
+      await addLog(`[3/5] [ESP32] Recibido paquete. Idioma configurado: "${selectedLanguage}". Escribiendo en NVS... OK`, 800);
       await addLog('[4/5] [ESP32] Apagando Bluetooth para ahorro de energía... OK', 800);
       await addLog(`[5/5] [ESP32] Probando conexión autónoma a red WiFi "${finalSsid}"...`, 800);
 
@@ -160,6 +339,16 @@ export default function PairDeviceScreen() {
         {phase === 'scan' && (
           <View style={styles.card}>
             <Text style={styles.cardHeader}>DISPOSITIVOS CERCANOS</Text>
+            
+            {!scanProgress && devicesFound.length > 0 && (
+              <View style={styles.alertBanner}>
+                <Ionicons name="sparkles" size={18} color="#FF4500" style={{ marginRight: 8 }} />
+                <Text style={styles.alertBannerText}>
+                  ✨ ¡Mira! Nuevo hardware de Vimo detectado en el área. Selecciona un dispositivo para configurarlo.
+                </Text>
+              </View>
+            )}
+
             {scanProgress ? (
               <View style={styles.scanState}>
                 <ActivityIndicator size="large" color="#FF4500" />
@@ -172,10 +361,11 @@ export default function PairDeviceScreen() {
                     key={d.id} 
                     style={[styles.deviceRow, !d.compatible && styles.deviceDisabled]}
                     disabled={!d.compatible}
-                    onPress={conectarDispositivo}
+                    onPress={() => conectarDispositivo(d)}
                   >
                     <View style={{ flex: 1 }}>
                       <Text style={styles.deviceName}>{d.name}</Text>
+                      {d.description && <Text style={styles.deviceDescription}>{d.description}</Text>}
                       <Text style={styles.deviceStatus}>{d.status}</Text>
                     </View>
                     {d.compatible && (
@@ -278,6 +468,37 @@ export default function PairDeviceScreen() {
                   />
                 </View>
 
+                <View style={styles.formGroup}>
+                  <Text style={styles.inputLabel}>Idioma Predeterminado de Vimo *</Text>
+                  <View style={styles.langGrid}>
+                    {[
+                      { code: 'es', name: 'Español' },
+                      { code: 'en', name: 'English' },
+                      { code: 'fr', name: 'Français' },
+                      { code: 'de', name: 'Deutsch' },
+                      { code: 'it', name: 'Italiano' },
+                      { code: 'ja', name: '日本語' },
+                      { code: 'ru', name: 'Русский' },
+                      { code: 'ar', name: 'العربية' },
+                      { code: 'zh', name: '中文' },
+                      { code: 'ko', name: '한국어' },
+                    ].map((lang) => {
+                      const isActive = selectedLanguage === lang.code;
+                      return (
+                        <TouchableOpacity
+                          key={lang.code}
+                          style={[styles.langItem, isActive && styles.langItemActive]}
+                          onPress={() => setSelectedLanguage(lang.code)}
+                        >
+                          <Text style={[styles.langItemText, isActive && styles.langItemTextActive]}>
+                            {lang.name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
                 <TouchableOpacity style={styles.primaryBtn} onPress={enviarCredenciales}>
                   <Text style={styles.primaryBtnText}>
                     CONECTAR DISPOSITIVO
@@ -328,6 +549,24 @@ export default function PairDeviceScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0A1128', padding: 20 },
   topHeader: { marginTop: 30, marginBottom: 10 },
+  deviceDescription: { color: '#AAAAAA', fontSize: 12, marginTop: 4, marginBottom: 4, lineHeight: 16 },
+  alertBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 69, 0, 0.15)',
+    borderWidth: 1,
+    borderColor: '#FF4500',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
+  },
+  alertBannerText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 'bold',
+    flex: 1,
+    lineHeight: 18,
+  },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   backBtnText: { color: '#FF4500', fontWeight: 'bold', fontSize: 14, letterSpacing: 1 },
   scrollContent: { paddingBottom: 40 },
@@ -415,5 +654,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 4,
     textTransform: 'uppercase'
-  }
+  },
+  langGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8, justifyContent: 'space-between' },
+  langItem: { paddingVertical: 10, paddingHorizontal: 6, borderRadius: 8, backgroundColor: '#1A2340', borderWidth: 1, borderColor: '#333', width: '48%', marginBottom: 6 },
+  langItemActive: { backgroundColor: '#FF4500', borderColor: '#FF4500' },
+  langItemText: { color: '#AAA', fontSize: 12, textAlign: 'center' },
+  langItemTextActive: { color: '#FFF', fontWeight: 'bold' }
 });

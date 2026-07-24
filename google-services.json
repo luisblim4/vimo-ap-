@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "66991987954",
+    "project_id": "vimo-s3",
+    "storage_bucket": "vimo-s3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:66991987954:android:ab434e872804d151e5c46b",
+        "android_client_info": {
+          "package_name": "com.lalo2.Vimo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC4P61HEr80C5a2XM80dKtRqMYeODYqoDU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

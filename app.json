@@ -34,8 +34,11 @@
       "permissions": [
         "NOTIFICATIONS",
         "POST_NOTIFICATIONS",
-        "NOTIFICATIONS",
-        "POST_NOTIFICATIONS"
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN",
+        "BLUETOOTH_CONNECT",
+        "BLUETOOTH_SCAN",
+        "ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -55,7 +58,15 @@
         }
       ],
       "expo-font",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": ["peripheral", "central"],
+          "bluetoothNeverForLocationPermissionDescription": "Esta app requiere Bluetooth para configurar la red WiFi de tu dispositivo Vimo."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

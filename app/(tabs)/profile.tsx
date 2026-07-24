@@ -172,7 +172,7 @@ export default function Profile() {
 
           <Pressable
             testID="pair-ble-button"
-            onPress={() => router.push("/WifiConfigScreen" as any)}
+            onPress={() => router.push("/pair-device" as any)}
             style={({ pressed }) => [styles.bleBtn, pressed && { opacity: 0.85 }]}
           >
             <Ionicons name="bluetooth" size={16} color={colors.brand} />

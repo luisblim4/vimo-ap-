@@ -9,6 +9,8 @@ import { useDevices } from "@/src/context/DeviceContext";
 import { api } from "@/src/api/client";
 import VimoMapView, { MapMarker } from "@/src/components/VimoMapView";
 import { registerForPushAsync } from "@/src/utils/push";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "../firebaseConfig";
 
 type Event = { id: string; type: string; text: string; created_at: string; meta?: any };
 type Hazard = { id: string; device_id: string; tipo_alerta: string; descripcion: string; latitud: number; longitud: number; created_at: string };
@@ -74,9 +76,24 @@ export default function MapHome() {
   const [now, setNow] = useState(Date.now());
   const prevEventIds = useRef<Set<string>>(new Set());
   const newEventIds = useRef<Set<string>>(new Set());
+  const [firestoreHazards, setFirestoreHazards] = useState<any[]>([]);
 
   useEffect(() => { if (user) registerForPushAsync(); }, [user]);
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 5000); return () => clearInterval(t); }, []);
+
+  // Escuchador en tiempo real de Firestore para la colección "obstaculos"
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "obstaculos"), (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setFirestoreHazards(docs);
+    }, (error) => {
+      console.error("Error leyendo Firestore 'obstaculos': ", error);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const loadAll = useCallback(async () => {
     try {
@@ -133,8 +150,25 @@ export default function MapHome() {
         tipo, title: h.descripcion, subtitle: shortTime(h.created_at),
       });
     }
+    // Agregar obstáculos de Firestore en tiempo real
+    for (const fh of firestoreHazards) {
+      const rawTipo = (fh.tipo || "").toLowerCase();
+      const tipo = (["bache","tronco","choque","obstaculo","emergencia"].includes(rawTipo) ? rawTipo : "otro") as any;
+      const lat = parseFloat(fh.latitud);
+      const lon = parseFloat(fh.longitud);
+      if (!isNaN(lat) && !isNaN(lon)) {
+        out.push({
+          id: fh.id,
+          lat,
+          lon,
+          tipo,
+          title: fh.descripcion || fh.tipo || "Obstáculo detectado",
+          subtitle: fh.nodo_id || "Vimo Master",
+        });
+      }
+    }
     return out;
-  }, [devices, hazards, activeAlerts]);
+  }, [devices, hazards, activeAlerts, firestoreHazards]);
 
   const activeDevice = devices.find((d) => d.id === activeDeviceId);
 
@@ -177,7 +211,7 @@ export default function MapHome() {
         <StatusPill icon="navigate" label={onlineInfo.gpsOk ? "GPS" : "NO GPS"} active={onlineInfo.gpsOk} testID="status-gps" />
         <View style={{ width: 6 }} />
         <Pressable 
-          onPress={() => router.push("/WifiConfigScreen" as any)} 
+          onPress={() => router.push("/pair-device" as any)} 
           style={{ justifyContent: "center", padding: 4 }}
           testID="wifi-config-button"
         >

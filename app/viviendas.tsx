@@ -156,7 +156,7 @@ export default function ViviendasSegurasScreen() {
 
       <TouchableOpacity 
         style={styles.bleButton} 
-        onPress={() => router.push("/WifiConfigScreen" as any)}
+        onPress={() => router.push("/pair-device" as any)}
       >
         <Ionicons name="bluetooth" size={16} color="#FF4500" style={{ marginRight: 8 }} />
         <Text style={styles.bleButtonText}>CONFIGURAR WIFI POR BLUETOOTH (BLE)</Text>
