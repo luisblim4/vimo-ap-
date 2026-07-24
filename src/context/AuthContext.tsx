@@ -1,126 +1,94 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { api, API_BASE } from "../api/client";
-import { deleteToken, getToken, saveToken } from "../utils/token";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as NavigationBar from "expo-navigation-bar";
+import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from '../../app/firebaseConfig';
 
-type User = { id: string; email: string } | null;
+// ==================================================
+// ⚡ SWITCH DE DESARROLLO (MOCK SEGURO VÍA ENV)
+// ==================================================
+const ENABLE_DEV_MOCK = process.env.EXPO_PUBLIC_DEV_MOCK === 'true';
 
-interface AuthCtx {
-  user: User;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
+export interface MockUser {
+  email: string;
+  uid: string;
+  isMock: true;
 }
 
-const Ctx = createContext<AuthCtx | undefined>(undefined);
+export type AuthUser = User | MockUser | null;
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User>(null);
-  const [loading, setLoading] = useState(true);
+interface AuthContextType {
+  user: AuthUser;
+  isLoading: boolean;
+}
 
-  const bootstrap = useCallback(async () => {
-    try {
-      // Ocultar botones de Android y forzar pantalla completa
-      try {
-        await NavigationBar.setVisibilityAsync("hidden");
-        await NavigationBar.setBehaviorAsync("inset-swipe");
-      } catch (err) {
-        console.log("Error configurando NavigationBar:", err);
-      }
+export const AuthContext = createContext<AuthContextType>({ user: null, isLoading: true });
 
-      // Leer la memoria física
-      const session = await AsyncStorage.getItem("userSession");
-      const savedEmail = await AsyncStorage.getItem("userData");
-
-      if (API_BASE) {
-        const token = await getToken();
-        if (token) {
-          try {
-            const me = await api.me();
-            setUser(me);
-            // Sincronizar memoria física
-            await AsyncStorage.setItem("userSession", "activo");
-            await AsyncStorage.setItem("userData", me.email);
-            return;
-          } catch (err) {
-            console.log("Error en bootstrap API, intentando fallback local:", err);
-          }
-        }
-      }
-
-      // Fallback local o modo offline/mock
-      if (session === "activo" && savedEmail) {
-        setUser({ id: "local", email: savedEmail });
-      } else {
-        setUser(null);
-      }
-    } catch (error) {
-      console.log("Error en bootstrap:", error);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<AuthUser>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    bootstrap();
-  }, [bootstrap]);
-
-  const login = async (email: string, password: string) => {
-    try {
-      if (API_BASE) {
-        const data = await api.login(email, password);
-        await saveToken(data.access_token);
-        const me = await api.me();
-        await AsyncStorage.setItem("userSession", "activo");
-        await AsyncStorage.setItem("userData", email);
-        setUser(me);
-      } else {
-        // Modo offline / MOCK local
-        await AsyncStorage.setItem("userSession", "activo");
-        await AsyncStorage.setItem("userData", email);
-        setUser({ id: "local", email });
-      }
-    } catch (error) {
-      console.error(error);
-      throw error;
+    // 1️⃣ Flujo de Desarrollo (Sin bloqueos para el equipo)
+    if (ENABLE_DEV_MOCK) {
+      console.log("⚠️ MOCK MODE ACTIVO: Simulando sesión de Administrador");
+      setUser({ email: 'admin@museo.com', uid: 'mock-admin-123', isMock: true });
+      setIsLoading(false);
+      return;
     }
-  };
 
-  const register = async (email: string, password: string) => {
-    try {
-      if (API_BASE) {
-        await api.register(email, password);
-        await login(email, password);
-      } else {
-        await login(email, password);
-      }
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
-  };
+    // 2️⃣ Flujo de Producción (Suscripción real a Firebase)
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setIsLoading(false); // Apagamos el spinner exactamente cuando Firebase responde
+    });
 
-  const logout = async () => {
-    try {
-      if (API_BASE) {
-        await deleteToken();
-      }
-      await AsyncStorage.removeItem("userSession");
-      await AsyncStorage.removeItem("userData");
-      setUser(null);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    // Limpiamos la suscripción de memoria al desmontar
+    return () => unsubscribe();
+  }, []);
 
-  return <Ctx.Provider value={{ user, loading, login, register, logout }}>{children}</Ctx.Provider>;
-}
+  // ==================================================
+  // 🛑 ESTADO DE CARGA GLOBAL (Cero destellos visuales)
+  // ==================================================
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#00ff00" />
+      </View>
+    );
+  }
 
-export function useAuth(): AuthCtx {
-  const v = useContext(Ctx);
-  if (!v) throw new Error("useAuth must be used inside AuthProvider");
-  return v;
-}
+  return (
+    <AuthContext.Provider value={{ user, isLoading }}>
+      {/* ⚠️ BANNER DE SEGURIDAD PARA DEMO: Imposible no notarlo si se dejó el mock activo */}
+      {ENABLE_DEV_MOCK && (
+        <View style={styles.mockBanner}>
+          <Text style={styles.mockBannerText}>⚠️ MODO MOCK ACTIVO - PRUEBAS LOCALES</Text>
+        </View>
+      )}
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center', // Centrado vertical perfecto
+    alignItems: 'center',
+    backgroundColor: '#121212',
+  },
+  mockBanner: {
+    backgroundColor: '#D32F2F',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+  },
+  mockBannerText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+});
