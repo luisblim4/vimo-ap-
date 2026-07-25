@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Link, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/src/context/AuthContext";
 import { colors, spacing, radius, fontFamily } from "@/src/theme";
 
@@ -13,6 +14,7 @@ export default function Login() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +25,13 @@ export default function Login() {
       await login(email.trim(), password);
       router.replace("/selector");
     } catch (e: any) {
-      setError(e?.message || "Error al iniciar sesión");
+      let msg = e?.message || "Error al iniciar sesión";
+      if (e?.code === 'auth/wrong-password' || e?.code === 'auth/invalid-credential') {
+        msg = "Contraseña incorrecta. Por favor verifica tus datos.";
+      } else if (e?.code === 'auth/user-not-found') {
+        msg = "No existe una cuenta con este correo.";
+      }
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -54,16 +62,22 @@ export default function Login() {
               style={styles.input}
             />
 
-            <Text style={[styles.label, { marginTop: spacing.lg }]}>PASSWORD</Text>
-            <TextInput
-              testID="login-password-input"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              placeholder="••••••••"
-              placeholderTextColor={colors.onSurfaceSecondary}
-              style={styles.input}
-            />
+            <Text style={[styles.label, { marginTop: spacing.lg }]}>CONTRASEÑA</Text>
+            <View style={styles.passwordWrap}>
+              <TextInput
+                testID="login-password-input"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                placeholder="••••••••"
+                placeholderTextColor={colors.onSurfaceSecondary}
+                style={styles.passwordInput}
+              />
+              <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={colors.onSurfaceSecondary} />
+              </Pressable>
+            </View>
 
             {error ? <Text style={styles.error} testID="login-error">{error}</Text> : null}
 
@@ -134,11 +148,31 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: radius.md,
   },
+  passwordWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+  },
+  passwordInput: {
+    flex: 1,
+    color: colors.onSurface,
+    fontFamily: fontFamily.text,
+    fontSize: 15,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  eyeBtn: {
+    paddingHorizontal: spacing.md,
+  },
   error: {
     fontFamily: fontFamily.text,
     color: colors.error,
     fontSize: 13,
     marginTop: spacing.md,
+    fontWeight: 'bold',
   },
   btn: {
     backgroundColor: colors.brand,

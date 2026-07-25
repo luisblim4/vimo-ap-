@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { onAuthStateChanged, User, signOut } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../app/firebaseConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -18,7 +18,7 @@ interface AuthContextType {
   user: AuthUser;
   loading: boolean;
   isLoading: boolean;
-  login?: (email: string, pass: string) => Promise<void>;
+  login: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -26,6 +26,7 @@ export const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   isLoading: true,
+  login: async () => {},
   logout: async () => {},
 });
 
@@ -48,6 +49,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
+  const login = async (email: string, pass: string) => {
+    setIsLoading(true);
+    try {
+      if (ENABLE_DEV_MOCK) {
+        setUser({ email, uid: 'mock-admin-123', isMock: true });
+        return;
+      }
+      await signInWithEmailAndPassword(auth, email, pass);
+    } catch (e: any) {
+      console.log('Error en login:', e);
+      throw e;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     try {
       await signOut(auth);
@@ -69,7 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading: isLoading, isLoading, logout }}>
+    <AuthContext.Provider value={{ user, loading: isLoading, isLoading, login, logout }}>
       {ENABLE_DEV_MOCK && (
         <View style={styles.mockBanner}>
           <Text style={styles.mockBannerText}>⚠️ MODO MOCK ACTIVO - PRUEBAS LOCALES</Text>
