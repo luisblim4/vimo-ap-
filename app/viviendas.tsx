@@ -221,17 +221,8 @@ export default function ViviendasSegurasScreen() {
         <Text style={styles.cardDesc}>No tienes nodos de vivienda vinculados aún.</Text>
       )}
 
-      {/* PANEL DE MONITOREO SIMULADO */}
-      <View style={{marginTop: 30}}>
-        <Text style={styles.sectionTitle}>MONITOREO DE AIRE GENERAL (MQ-2)</Text>
-        <View style={styles.cardAlert}>
-          <Text style={styles.readingLabel}>Nivel de Gas/Humo detectado:</Text>
-          <Text style={styles.readingValue}>LIMPIO</Text>
-        </View>
-      </View>
-
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Text style={styles.buttonText}>REGRESAR AL SELECTOR</Text>
+        <Text style={styles.buttonText}>REGRESAR</Text>
       </TouchableOpacity>
       
       <View style={{ height: 40 }} />

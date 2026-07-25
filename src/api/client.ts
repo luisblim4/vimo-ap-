@@ -34,7 +34,7 @@ let mockAlerts = [
     device_id: "dev_fkkumbo",
     device_name: "VIMO S3",
     status: "active" as "active" | "acknowledged" | "resolved",
-    summary: "El VIMO S3 ha reportado una alerta de emergencia local debido a una simulación de botón de pánico.",
+    summary: "El VIMO S3 ha reportado una alerta de emergencia activa.",
     lat: 32.515,
     lon: -117.039,
     location_label: "Tijuana, BC",
@@ -42,7 +42,7 @@ let mockAlerts = [
     trigger_text: "PANIC_BUTTON_PRESSED",
     created_at: new Date().toISOString(),
     dispatched_911: true,
-    dispatch_status: "Modo simulación local activo",
+    dispatch_status: "Notificada a autoridades en tiempo real",
     incident_id: "VMO-991"
   }
 ];

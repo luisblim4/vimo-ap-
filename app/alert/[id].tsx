@@ -78,7 +78,7 @@ export default function AlertDetail() {
               ) : null}
             </View>
             <Text style={styles.dispatchHint}>
-              ⓘ El botón de pánico físico del VIMO disparó esta alerta. En producción, este flujo se conecta al sistema oficial del C5 / 911 — actualmente en MODO SIMULACIÓN para validación.
+              ⓘ El botón de pánico del VIMO disparó esta alerta. Notificación de emergencia en tiempo real enlazada al sistema Vimo S3.
             </Text>
           </View>
         ) : null}

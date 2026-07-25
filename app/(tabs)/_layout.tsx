@@ -27,21 +27,27 @@ export default function TabsLayout() {
       >
         <Tabs.Screen
           name="index"
-          options={{ title: "MAPA", tabBarIcon: ({ color, size }) => <Ionicons name="map-outline" size={size} color={color} /> }}
-        />
-        <Tabs.Screen
-          name="alerts"
-          options={{ title: "ALERTAS", tabBarIcon: ({ color, size }) => <Ionicons name="warning-outline" size={size} color={color} /> }}
+          options={{
+            title: "MONITOREO",
+            tabBarIcon: ({ color, size }) => <Ionicons name="stats-chart-outline" size={size} color={color} />,
+          }}
         />
         <Tabs.Screen
           name="controls"
-          options={{ title: "CONTROLES", tabBarIcon: ({ color, size }) => <Ionicons name="game-controller-outline" size={size} color={color} /> }}
+          options={{
+            title: "CONTROL",
+            tabBarIcon: ({ color, size }) => <Ionicons name="hardware-chip-outline" size={size} color={color} />,
+          }}
         />
         <Tabs.Screen
           name="profile"
-          options={{ title: "PERFIL", tabBarIcon: ({ color, size }) => <Ionicons name="person-circle-outline" size={size} color={color} /> }}
+          options={{
+            title: "PERFIL",
+            tabBarIcon: ({ color, size }) => <Ionicons name="person-circle-outline" size={size} color={color} />,
+          }}
         />
-        {/* legacy events tab — hidden from tab bar */}
+        {/* Hidden legacy routes */}
+        <Tabs.Screen name="alerts" options={{ href: null }} />
         <Tabs.Screen name="events" options={{ href: null }} />
       </Tabs>
     </DeviceProvider>
