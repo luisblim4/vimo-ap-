@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from './firebaseConfig';
 import { useAuth } from '@/src/context/AuthContext';
 
 const LoginScreen: React.FC = () => {
   const router = useRouter();
-  const { login } = useAuth();
+  const authContext = useAuth();
   
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
@@ -24,7 +26,11 @@ const LoginScreen: React.FC = () => {
     setError(null);
 
     try {
-      await login(email.trim(), password);
+      if (authContext?.login && typeof authContext.login === 'function') {
+        await authContext.login(email.trim(), password);
+      } else {
+        await signInWithEmailAndPassword(auth, email.trim(), password);
+      }
       router.replace('/HistorialScreen' as any);
     } catch (err: any) {
       console.log("Error login screen:", err);

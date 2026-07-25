@@ -6,11 +6,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Link, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "./firebaseConfig";
 import { useAuth } from "@/src/context/AuthContext";
 import { colors, spacing, radius, fontFamily } from "@/src/theme";
 
 export default function Login() {
-  const { login } = useAuth();
+  const authContext = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,17 +21,28 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async () => {
+    if (!email.trim() || !password.trim()) {
+      setError("Por favor ingresa tu correo y contraseña.");
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
-      await login(email.trim(), password);
+      if (authContext?.login && typeof authContext.login === 'function') {
+        await authContext.login(email.trim(), password);
+      } else {
+        await signInWithEmailAndPassword(auth, email.trim(), password);
+      }
       router.replace("/selector");
     } catch (e: any) {
+      console.log("Login error:", e);
       let msg = e?.message || "Error al iniciar sesión";
       if (e?.code === 'auth/wrong-password' || e?.code === 'auth/invalid-credential') {
         msg = "Contraseña incorrecta. Por favor verifica tus datos.";
       } else if (e?.code === 'auth/user-not-found') {
-        msg = "No existe una cuenta con este correo.";
+        msg = "No existe una cuenta registrada con este correo.";
+      } else if (e?.code === 'auth/invalid-email') {
+        msg = "El formato de correo es inválido.";
       }
       setError(msg);
     } finally {
