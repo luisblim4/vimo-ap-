@@ -46,9 +46,10 @@ export default function TabsLayout() {
             tabBarIcon: ({ color, size }) => <Ionicons name="person-circle-outline" size={size} color={color} />,
           }}
         />
-        {/* Hidden legacy routes */}
-        <Tabs.Screen name="alerts" options={{ href: null }} />
-        <Tabs.Screen name="events" options={{ href: null }} />
+        <Tabs.Screen
+          name="alerts"
+          options={{ href: null }}
+        />
       </Tabs>
     </DeviceProvider>
   );
