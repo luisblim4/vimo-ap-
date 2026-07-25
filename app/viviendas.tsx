@@ -162,32 +162,20 @@ export default function ViviendasSegurasScreen() {
         <Text style={styles.bleButtonText}>CONFIGURAR WIFI POR BLUETOOTH (BLE)</Text>
       </TouchableOpacity>
 
-      {/* SECCIÓN DE ADMINISTRACIÓN Y VÍAS DE CURADOR */}
-      <View style={{ marginTop: 15 }}>
-        <Text style={styles.sectionTitle}>PANEL DEL CURADOR Y EQUIPO</Text>
+      {/* BOTÓN INSTITUCIONES Y MUSEOS */}
+      <View style={{ marginTop: 20 }}>
+        <Text style={styles.sectionTitle}>SECTOR INSTITUCIONAL Y MONUMENTOS</Text>
         
         <TouchableOpacity 
-          style={styles.curadorButton} 
-          onPress={() => router.push("/HistorialScreen" as any)}
+          style={styles.institucionesButton} 
+          onPress={() => router.push("/instituciones" as any)}
         >
-          <Ionicons name="analytics" size={18} color="#00FF00" style={{ marginRight: 8 }} />
-          <Text style={styles.curadorButtonText}>PANEL DEL CURADOR (HISTORIAL)</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.equipoButton} 
-          onPress={() => router.push("/EquipoScreen" as any)}
-        >
-          <Ionicons name="people" size={18} color="#00E5FF" style={{ marginRight: 8 }} />
-          <Text style={styles.equipoButtonText}>VER EQUIPO VIMO S3</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.loginBtnNav} 
-          onPress={() => router.push("/LoginScreen" as any)}
-        >
-          <Ionicons name="lock-closed" size={18} color="#FFD700" style={{ marginRight: 8 }} />
-          <Text style={styles.loginBtnNavText}>ACCESO RESTRINGIDO (LOGIN)</Text>
+          <Ionicons name="business" size={20} color="#00FF00" style={{ marginRight: 10 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.institucionesButtonTitle}>INSTITUCIONES Y MUSEOS</Text>
+            <Text style={styles.institucionesButtonSub}>Gestión de Museos, Parques y Patrimonio Histórico</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#00FF00" />
         </TouchableOpacity>
       </View>
 
@@ -313,55 +301,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 1,
   },
-  curadorButton: {
+  institucionesButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: 'rgba(0, 255, 0, 0.08)',
     borderWidth: 1,
     borderColor: '#00FF00',
+    borderRadius: 10,
+    paddingHorizontal: 16,
     paddingVertical: 14,
-    borderRadius: 8,
     marginTop: 8,
   },
-  curadorButtonText: {
+  institucionesButtonTitle: {
     color: '#00FF00',
     fontWeight: 'bold',
-    fontSize: 13,
+    fontSize: 14,
     letterSpacing: 1,
   },
-  equipoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0, 229, 255, 0.08)',
-    borderWidth: 1,
-    borderColor: '#00E5FF',
-    paddingVertical: 14,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  equipoButtonText: {
-    color: '#00E5FF',
-    fontWeight: 'bold',
-    fontSize: 13,
-    letterSpacing: 1,
-  },
-  loginBtnNav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 215, 0, 0.08)',
-    borderWidth: 1,
-    borderColor: '#FFD700',
-    paddingVertical: 14,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  loginBtnNavText: {
-    color: '#FFD700',
-    fontWeight: 'bold',
-    fontSize: 13,
-    letterSpacing: 1,
+  institucionesButtonSub: {
+    color: '#888888',
+    fontSize: 12,
+    marginTop: 2,
   }
 });
