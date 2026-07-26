@@ -29,12 +29,17 @@ export default function RegisterScreen() {
     } catch (err: any) {
       console.log("Error UI Registro:", err?.message || err);
       
-      if (err.code === 'auth/weak-password') {
+      // ✅ Solución segura: Informar y pedir que inicie sesión manualmente
+      if (err?.code === 'auth/email-already-in-use') {
+        setError('Este correo ya está registrado. Por favor, ve a Iniciar Sesión.');
+      } else if (err?.code === 'auth/weak-password') {
         setError('La contraseña debe tener al menos 6 caracteres.');
-      } else if (err.code === 'auth/invalid-email') {
+      } else if (err?.code === 'auth/invalid-email') {
         setError('El formato del correo es inválido.');
+      } else if (err?.message?.includes('network')) {
+        setError('Error de conexión. Verifica tu internet e intenta de nuevo.');
       } else {
-        setError(`Error: ${err?.message || "No se pudo registrar la cuenta. Verifica tus datos."}`);
+        setError('Error al crear la cuenta. Verifica tus datos.');
       }
     } finally {
       setLoading(false);
