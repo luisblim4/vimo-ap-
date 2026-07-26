@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator, Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import * as NavigationBar from "expo-navigation-bar";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AuthProvider, useAuth } from "@/src/context/AuthContext";
@@ -39,6 +40,13 @@ function NavGate() {
   const router = useRouter();
 
   useEffect(() => {
+    if (Platform.OS === "android") {
+      // 🪄 Pintar la barra de navegación del sistema Android en Azul Marino VIMO
+      NavigationBar.setBackgroundColorAsync("#0A1128").catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
     if (isLoading) return;
     const seg = segments[0] as string | undefined;
     const isAuthRoute = seg === "login" || seg === "register";
@@ -69,7 +77,7 @@ function NavGate() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" }}>
+      <View style={{ flex: 1, backgroundColor: "#0A1128", alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator color={colors.brand} size="large" />
       </View>
     );
@@ -82,6 +90,9 @@ function NavGate() {
       <Stack.Screen name="register" />
       <Stack.Screen name="selector" />
       <Stack.Screen name="viviendas" />
+      <Stack.Screen name="monitoreo-vivienda" />
+      <Stack.Screen name="especificaciones-vivienda" />
+      <Stack.Screen name="perfil-vivienda" />
       <Stack.Screen name="instituciones" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="alert/[id]" options={{ presentation: "card" }} />
