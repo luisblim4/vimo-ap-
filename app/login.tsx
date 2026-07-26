@@ -5,46 +5,25 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Link, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "./firebaseConfig";
 import { useAuth } from "@/src/context/AuthContext";
 import { colors, spacing, radius, fontFamily } from "@/src/theme";
 
 export default function Login() {
-  const authContext = useAuth();
+  const { login } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async () => {
-    if (!email.trim() || !password.trim()) {
-      setError("Por favor ingresa tu correo y contraseña.");
-      return;
-    }
     setError(null);
     setLoading(true);
     try {
-      if (authContext?.login && typeof authContext.login === 'function') {
-        await authContext.login(email.trim(), password);
-      } else {
-        await signInWithEmailAndPassword(auth, email.trim(), password);
-      }
+      await login(email.trim(), password);
       router.replace("/selector");
     } catch (e: any) {
-      console.log("Login error:", e);
-      let msg = e?.message || "Error al iniciar sesión";
-      if (e?.code === 'auth/wrong-password' || e?.code === 'auth/invalid-credential') {
-        msg = "Contraseña incorrecta. Por favor verifica tus datos.";
-      } else if (e?.code === 'auth/user-not-found') {
-        msg = "No existe una cuenta registrada con este correo.";
-      } else if (e?.code === 'auth/invalid-email') {
-        msg = "El formato de correo es inválido.";
-      }
-      setError(msg);
+      setError(e?.message || "Error al iniciar sesión");
     } finally {
       setLoading(false);
     }
@@ -75,22 +54,16 @@ export default function Login() {
               style={styles.input}
             />
 
-            <Text style={[styles.label, { marginTop: spacing.lg }]}>CONTRASEÑA</Text>
-            <View style={styles.passwordWrap}>
-              <TextInput
-                testID="login-password-input"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                placeholder="••••••••"
-                placeholderTextColor={colors.onSurfaceSecondary}
-                style={styles.passwordInput}
-              />
-              <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={colors.onSurfaceSecondary} />
-              </Pressable>
-            </View>
+            <Text style={[styles.label, { marginTop: spacing.lg }]}>PASSWORD</Text>
+            <TextInput
+              testID="login-password-input"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              placeholder="••••••••"
+              placeholderTextColor={colors.onSurfaceSecondary}
+              style={styles.input}
+            />
 
             {error ? <Text style={styles.error} testID="login-error">{error}</Text> : null}
 
@@ -161,31 +134,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: radius.md,
   },
-  passwordWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceSecondary,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-  },
-  passwordInput: {
-    flex: 1,
-    color: colors.onSurface,
-    fontFamily: fontFamily.text,
-    fontSize: 15,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  eyeBtn: {
-    paddingHorizontal: spacing.md,
-  },
   error: {
     fontFamily: fontFamily.text,
     color: colors.error,
     fontSize: 13,
     marginTop: spacing.md,
-    fontWeight: 'bold',
   },
   btn: {
     backgroundColor: colors.brand,
