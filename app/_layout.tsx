@@ -5,8 +5,7 @@ import * as Linking from "expo-linking";
 import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { View, ActivityIndicator, Platform } from "react-native";
-import * as Device from 'expo-device';
-import Constants from 'expo-constants';
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AuthProvider, useAuth } from "@/src/context/AuthContext";
@@ -35,12 +34,12 @@ if (Platform.OS === "android") {
 }
 
 function NavGate() {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (loading) return;
+    if (isLoading) return;
     const seg = segments[0] as string | undefined;
     const isAuthRoute = seg === "login" || seg === "register";
     if (!user && !isAuthRoute) {
@@ -48,7 +47,7 @@ function NavGate() {
     } else if (user && isAuthRoute) {
       router.replace("/selector");
     }
-  }, [user, loading, segments, router]);
+  }, [user, isLoading, segments, router]);
 
   useEffect(() => {
     if (Platform.OS === "web") return;
@@ -68,19 +67,22 @@ function NavGate() {
     return () => { tapSub.remove(); };
   }, [router]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator color={colors.brand} />
+        <ActivityIndicator color={colors.brand} size="large" />
       </View>
     );
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.surface } }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0A1128" } }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />
+      <Stack.Screen name="selector" />
+      <Stack.Screen name="viviendas" />
+      <Stack.Screen name="instituciones" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="alert/[id]" options={{ presentation: "card" }} />
       <Stack.Screen name="device/[id]/profile" options={{ presentation: "card" }} />
@@ -102,9 +104,11 @@ export default function RootLayout() {
   if ((!iconsLoaded && !iconsErr) || !fontsLoaded) return null;
 
   return (
-    <AuthProvider>
-      <StatusBar style="light" />
-      <NavGate />
-    </AuthProvider>
+    <SafeAreaProvider style={{ backgroundColor: "#0A1128" }}>
+      <AuthProvider>
+        <StatusBar style="light" backgroundColor="#0A1128" />
+        <NavGate />
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

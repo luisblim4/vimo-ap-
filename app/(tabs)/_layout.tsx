@@ -7,6 +7,8 @@ import { DeviceProvider } from "@/src/context/DeviceContext";
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const bottomInset = insets.bottom > 0 ? insets.bottom : 10;
+
   return (
     <DeviceProvider>
       <Tabs
@@ -15,12 +17,12 @@ export default function TabsLayout() {
           tabBarActiveTintColor: colors.brand,
           tabBarInactiveTintColor: colors.onSurfaceSecondary,
           tabBarStyle: {
-            backgroundColor: colors.surfaceSecondary,
-            borderTopColor: colors.divider,
+            backgroundColor: "#0A1128",
+            borderTopColor: "#1E293B",
             borderTopWidth: 1,
-            height: 64 + (insets.bottom > 0 ? insets.bottom - 10 : 0),
-            paddingTop: 6,
-            paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
+            height: 60 + bottomInset,
+            paddingTop: 8,
+            paddingBottom: bottomInset,
           },
           tabBarLabelStyle: { fontFamily: fontFamily.displayBold, fontSize: 10, letterSpacing: 1 },
         }}

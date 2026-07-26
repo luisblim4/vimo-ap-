@@ -1,19 +1,19 @@
 export const colors = {
-  surface: "#0C0D0F",
-  onSurface: "#F2F3F5",
-  surfaceSecondary: "#15171A",
-  onSurfaceSecondary: "#A0A5B1",
-  surfaceTertiary: "#22252A",
-  onSurfaceTertiary: "#D1D5DB",
-  brand: "#FF5E00",
-  brandSecondary: "#331805",
-  onBrandSecondary: "#FF8F4D",
-  success: "#22C55E",
+  surface: "#0A1128",
+  onSurface: "#FFFFFF",
+  surfaceSecondary: "#101B3B",
+  onSurfaceSecondary: "#94A3B8",
+  surfaceTertiary: "#1E293B",
+  onSurfaceTertiary: "#CBD5E1",
+  brand: "#00E5FF",
+  brandSecondary: "#003C50",
+  onBrandSecondary: "#80F3FF",
+  success: "#00FF00",
   warning: "#F59E0B",
   error: "#EF4444",
-  border: "#2C2F36",
-  borderStrong: "#4B515D",
-  divider: "#1E2024",
+  border: "#1E293B",
+  borderStrong: "#334155",
+  divider: "#1E293B",
 };
 
 export const spacing = {
@@ -42,8 +42,8 @@ export const fontFamily = {
 
 export const stateColors: Record<string, { bg: string; fg: string; border: string }> = {
   IDLE: { bg: colors.surfaceTertiary, fg: colors.onSurface, border: colors.border },
-  RECORDING: { bg: "#1E3A8A33", fg: "#93C5FD", border: "#1E40AF" },
+  RECORDING: { bg: "#00E5FF22", fg: "#00E5FF", border: "#00E5FF" },
   PROCESSING: { bg: "#7C2D1233", fg: "#FCD34D", border: colors.warning },
-  SPEAKING: { bg: "#0B3B2333", fg: "#86EFAC", border: colors.success },
+  SPEAKING: { bg: "#00FF0022", fg: "#00FF00", border: colors.success },
   EMERGENCIA: { bg: "#7F1D1D55", fg: "#FCA5A5", border: colors.error },
 };

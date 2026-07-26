@@ -3,8 +3,10 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert 
 import { router, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ViviendasSegurasScreen() {
+  const insets = useSafeAreaInsets();
   const [casa, setCasa] = useState('');
   const [miembros, setMiembros] = useState('');
   const [habitaciones, setHabitaciones] = useState('');
@@ -40,7 +42,6 @@ export default function ViviendasSegurasScreen() {
     
     const newId = `nodo_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     
-    // Alerta obligatoria de creación de perfil de la casa
     Alert.alert(
       "🔑 Registro Pendiente: Perfil Obligatorio",
       `Para registrar y activar el nodo '${casa}', es obligatorio configurar el perfil del portador primero.`,
@@ -58,41 +59,26 @@ export default function ViviendasSegurasScreen() {
                 habitaciones,
                 lugar
               }
-            });
-            // Resetear entradas
-            setCasa('');
-            setMiembros('');
-            setHabitaciones('');
-            setLugar('');
+            } as any);
           }
         }
-      ],
-      { cancelable: false }
+      ]
     );
   };
 
-  const eliminarNodo = (id: string) => {
+  const eliminarNodo = async (id: string) => {
     Alert.alert(
-      "🗑️ Eliminar Nodo",
-      "¿Estás seguro de que deseas eliminar este nodo domótico y su perfil?",
+      "⚠️ Confirmar Eliminación",
+      "¿Estás seguro de que deseas eliminar este nodo domótico?",
       [
         { text: "Cancelar", style: "cancel" },
-        { 
-          text: "Eliminar", 
+        {
+          text: "Eliminar",
           style: "destructive",
           onPress: async () => {
-            try {
-              const raw = await AsyncStorage.getItem('@viviendas_nodes');
-              if (raw) {
-                const list = JSON.parse(raw);
-                const filtered = list.filter((n: any) => n.id !== id);
-                await AsyncStorage.setItem('@viviendas_nodes', JSON.stringify(filtered));
-                setNodosVinculados(filtered);
-                await AsyncStorage.removeItem(`@profile_${id}`);
-              }
-            } catch (err) {
-              console.log("Error al eliminar nodo:", err);
-            }
+            const actualizados = nodosVinculados.filter(n => n.id !== id);
+            setNodosVinculados(actualizados);
+            await AsyncStorage.setItem('@viviendas_nodes', JSON.stringify(actualizados));
           }
         }
       ]
@@ -100,14 +86,15 @@ export default function ViviendasSegurasScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { paddingTop: insets.top + 10 }]} contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}>
       <View style={styles.header}>
         <Text style={styles.title}>VIVIENDAS SEGURAS</Text>
-        <Text style={styles.subtitle}>Panel Domótico y Generación de API</Text>
+        <Text style={styles.subtitle}>Panel Domótico y Generación de Nodos</Text>
       </View>
 
-      {/* SECCIÓN DE VINCULACIÓN */}
+      {/* FORMULARIO DE REGISTRO */}
       <Text style={styles.sectionTitle}>VINCULAR NUEVO NODO DOMÓTICO</Text>
+      
       <View style={styles.formGroup}>
         <Text style={styles.inputLabel}>Nombre de la Casa / Nodo *</Text>
         <TextInput 
@@ -150,6 +137,7 @@ export default function ViviendasSegurasScreen() {
           onChangeText={setLugar}
         />
       </View>
+
       <TouchableOpacity style={styles.actionButton} onPress={generarCredencialCasa}>
         <Text style={styles.buttonText}>GENERAR CREDENCIAL</Text>
       </TouchableOpacity>
@@ -158,26 +146,9 @@ export default function ViviendasSegurasScreen() {
         style={styles.bleButton} 
         onPress={() => router.push("/pair-device" as any)}
       >
-        <Ionicons name="bluetooth" size={16} color="#FF4500" style={{ marginRight: 8 }} />
+        <Ionicons name="bluetooth" size={16} color="#00E5FF" style={{ marginRight: 8 }} />
         <Text style={styles.bleButtonText}>CONFIGURAR WIFI POR BLUETOOTH (BLE)</Text>
       </TouchableOpacity>
-
-      {/* BOTÓN INSTITUCIONES Y MUSEOS */}
-      <View style={{ marginTop: 20 }}>
-        <Text style={styles.sectionTitle}>SECTOR INSTITUCIONAL Y MONUMENTOS</Text>
-        
-        <TouchableOpacity 
-          style={styles.institucionesButton} 
-          onPress={() => router.push("/instituciones" as any)}
-        >
-          <Ionicons name="business" size={20} color="#00FF00" style={{ marginRight: 10 }} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.institucionesButtonTitle}>INSTITUCIONES Y MUSEOS</Text>
-            <Text style={styles.institucionesButtonSub}>Gestión de Museos, Parques y Patrimonio Histórico</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color="#00FF00" />
-        </TouchableOpacity>
-      </View>
 
       <View style={styles.divider} />
 
@@ -194,7 +165,6 @@ export default function ViviendasSegurasScreen() {
             <Text style={styles.cardData}>API KEY: {nodo.key}</Text>
             <Text style={styles.cardData}>MIEMBROS: {nodo.miembros}</Text>
             <Text style={styles.cardData}>HABITACIONES: {nodo.habitaciones}</Text>
-            <Text style={styles.cardData}>SOS NÚMERO: {nodo.emergencia || 'No registrado'}</Text>
             
             <View style={styles.cardAlertInside}>
               <Text style={styles.readingLabel}>Calidad de Aire ({nodo.lugar}):</Text>
@@ -204,7 +174,7 @@ export default function ViviendasSegurasScreen() {
             <View style={styles.actionRow}>
               <TouchableOpacity 
                 style={styles.profileBtn}
-                onPress={() => router.push(`/edit-profile?deviceId=${nodo.id}&origin=viviendas`)}
+                onPress={() => router.push(`/edit-profile?deviceId=${nodo.id}&origin=viviendas` as any)}
               >
                 <Text style={styles.profileBtnText}>EDITAR PERFIL</Text>
               </TouchableOpacity>
@@ -221,50 +191,63 @@ export default function ViviendasSegurasScreen() {
         <Text style={styles.cardDesc}>No tienes nodos de vivienda vinculados aún.</Text>
       )}
 
+      {/* BOTÓN INSTITUCIONES Y MUSEOS */}
+      <View style={{ marginTop: 25 }}>
+        <Text style={styles.sectionTitle}>SECTOR INSTITUCIONAL Y MONUMENTOS</Text>
+        
+        <TouchableOpacity 
+          style={styles.institucionesButton} 
+          onPress={() => router.push("/instituciones" as any)}
+        >
+          <Ionicons name="business" size={22} color="#00FF00" style={{ marginRight: 12 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.institucionesButtonTitle}>INSTITUCIONES Y MUSEOS</Text>
+            <Text style={styles.institucionesButtonSub}>Gestión de Museos, Parques y Patrimonio Histórico</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#00FF00" />
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <Text style={styles.buttonText}>REGRESAR</Text>
       </TouchableOpacity>
-      
-      <View style={{ height: 40 }} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A1128', padding: 20 },
-  header: { marginTop: 40, marginBottom: 30 },
-  title: { color: '#FFFFFF', fontSize: 26, fontWeight: 'bold', letterSpacing: 1 },
-  subtitle: { color: '#888888', fontSize: 16 },
-  sectionTitle: { color: '#AAAAAA', fontSize: 12, fontWeight: 'bold', marginBottom: 10, letterSpacing: 1 },
-  divider: { height: 1, backgroundColor: '#333', marginVertical: 20 },
+  container: { flex: 1, backgroundColor: '#0A1128', paddingHorizontal: 20 },
+  header: { marginTop: 20, marginBottom: 25 },
+  title: { color: '#00E5FF', fontSize: 24, fontWeight: 'bold', letterSpacing: 1 },
+  subtitle: { color: '#888888', fontSize: 14, marginTop: 4 },
+  sectionTitle: { color: '#AAAAAA', fontSize: 11, fontWeight: 'bold', marginBottom: 12, letterSpacing: 1 },
+  divider: { height: 1, backgroundColor: '#1E293B', marginVertical: 20 },
   formGroup: { marginBottom: 15 },
   inputLabel: { color: '#888', fontSize: 12, fontWeight: 'bold', marginBottom: 5 },
-  input: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333333', borderRadius: 8, color: '#FFFFFF', paddingHorizontal: 15, paddingVertical: 12, fontSize: 16 },
-  actionButton: { backgroundColor: '#FF4500', paddingVertical: 15, borderRadius: 8, alignItems: 'center' },
-  backButton: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#555', paddingVertical: 15, borderRadius: 8, alignItems: 'center', marginTop: 40 },
-  buttonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 14, letterSpacing: 1 },
+  input: { backgroundColor: '#101B3B', borderWidth: 1, borderColor: '#1E293B', borderRadius: 8, color: '#FFFFFF', paddingHorizontal: 15, paddingVertical: 12, fontSize: 15 },
+  actionButton: { backgroundColor: '#00E5FF', paddingVertical: 15, borderRadius: 8, alignItems: 'center', marginTop: 10 },
+  backButton: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#555', paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 30 },
+  buttonText: { color: '#0A1128', fontWeight: 'bold', fontSize: 14, letterSpacing: 1 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  cardLinked: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#FF4500', borderRadius: 12, padding: 20, marginBottom: 20 },
+  cardLinked: { backgroundColor: '#101B3B', borderWidth: 1, borderColor: '#00E5FF', borderRadius: 12, padding: 18, marginBottom: 15 },
   cardTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },
   cardStatusText: { color: '#00FF00', fontSize: 12, fontWeight: 'bold' },
-  cardData: { color: '#AAAAAA', fontSize: 14, marginBottom: 5, fontFamily: 'monospace' },
+  cardData: { color: '#AAAAAA', fontSize: 13, marginBottom: 4, fontFamily: 'monospace' },
   cardDesc: { color: '#888888', fontSize: 14, fontStyle: 'italic', marginBottom: 20 },
-  cardAlert: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 12, padding: 20, alignItems: 'center' },
-  cardAlertInside: { backgroundColor: '#121212', borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 15, marginVertical: 10, alignItems: 'center' },
-  readingLabel: { color: '#AAAAAA', fontSize: 14 },
-  readingValue: { color: '#00FF00', fontSize: 24, fontWeight: 'bold', marginTop: 5 },
-  readingValueInside: { color: '#00FF00', fontSize: 18, fontWeight: 'bold', marginTop: 5 },
-  actionRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 15, gap: 10 },
+  cardAlertInside: { backgroundColor: '#0A1128', borderWidth: 1, borderColor: '#1E293B', borderRadius: 8, padding: 12, marginVertical: 10, alignItems: 'center' },
+  readingLabel: { color: '#AAAAAA', fontSize: 13 },
+  readingValueInside: { color: '#00FF00', fontSize: 16, fontWeight: 'bold', marginTop: 4 },
+  actionRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, gap: 10 },
   profileBtn: { 
     flex: 1,
     borderWidth: 1, 
-    borderColor: '#FF4500', 
+    borderColor: '#00E5FF', 
     borderRadius: 8, 
     paddingVertical: 10, 
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 69, 0, 0.05)'
+    backgroundColor: 'rgba(0, 229, 255, 0.05)'
   },
-  profileBtnText: { color: '#FF4500', fontWeight: 'bold', fontSize: 12, letterSpacing: 1 },
+  profileBtnText: { color: '#00E5FF', fontWeight: 'bold', fontSize: 12, letterSpacing: 1 },
   deleteBtn: {
     flex: 1,
     borderWidth: 1,
@@ -281,15 +264,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#FF4500',
-    paddingVertical: 15,
+    borderColor: '#00E5FF',
+    paddingVertical: 14,
     borderRadius: 8,
-    marginTop: 10,
+    marginTop: 12,
   },
   bleButtonText: {
-    color: '#FF4500',
+    color: '#00E5FF',
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 13,
     letterSpacing: 1,
   },
   institucionesButton: {
@@ -301,7 +284,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    marginTop: 8,
   },
   institucionesButtonTitle: {
     color: '#00FF00',
