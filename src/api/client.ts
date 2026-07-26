@@ -76,21 +76,11 @@ let mockDevices = [
   }
 ];
 
-let mockHazards = [
-  {
-    id: "haz_1",
-    device_id: "dev_fkkumbo",
-    tipo_alerta: "bache",
-    descripcion: "Bache reportado en Vía Rápida",
-    latitud: 32.5155,
-    longitud: -117.0395,
-    created_at: new Date().toISOString()
-  }
-];
+let mockHazards: any[] = [];
 
 let mockEvents = [
-  { id: "evt_1", type: "info", text: "VIMO S3 sincronizado localmente", created_at: new Date().toISOString() },
-  { id: "evt_2", type: "bache", text: "Bache detectado a 50m", created_at: new Date(Date.now() - 60000).toISOString(), meta: { tipo_alerta: "bache" } }
+  { id: "evt_1", type: "info", text: "Nodo VIMO S3 en línea - Sensores calibrados", created_at: new Date().toISOString() },
+  { id: "evt_2", type: "telemetria", text: "Humedad y temperatura dentro de parámetros óptimos", created_at: new Date(Date.now() - 60000).toISOString() }
 ];
 
 export const api = {

@@ -27,39 +27,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 🔒 LOGIN ROBUSTO (Con manejo de auth/configuration-not-found)
+  // 🔒 LOGIN 100% ESTRICTO CON FIREBASE (Sin saltearse ni mocks)
   const login = async (email: string, pass: string) => {
     const cleanEmail = email.trim().toLowerCase();
-    try {
-      await signInWithEmailAndPassword(auth, cleanEmail, pass);
-    } catch (error: any) {
-      console.log("Firebase Auth login error code:", error?.code, error?.message);
-      
-      // Si el proveedor de correo/contraseña o Identity Toolkit no está activo en Firebase Console
-      if (error?.code === 'auth/configuration-not-found' || error?.code === 'auth/operation-not-allowed' || error?.code === 'auth/project-not-found') {
-        console.warn("⚠️ Firebase Auth requiere activar 'Correo/contraseña' en Firebase Console. Iniciando sesión de pruebas activa...");
-        setUser({ email: cleanEmail, uid: `user-${Date.now()}`, isMock: true });
-        return;
-      }
-      throw error;
-    }
+    await signInWithEmailAndPassword(auth, cleanEmail, pass);
   };
 
-  // 🔒 REGISTRO ROBUSTO (Con manejo de auth/configuration-not-found)
+  // 🔒 REGISTRO 100% ESTRICTO CON FIREBASE
   const register = async (email: string, pass: string) => {
     const cleanEmail = email.trim().toLowerCase();
-    try {
-      await createUserWithEmailAndPassword(auth, cleanEmail, pass);
-    } catch (error: any) {
-      console.log("Firebase Auth register error code:", error?.code, error?.message);
-
-      if (error?.code === 'auth/configuration-not-found' || error?.code === 'auth/operation-not-allowed' || error?.code === 'auth/project-not-found') {
-        console.warn("⚠️ Firebase Auth requiere activar 'Correo/contraseña' en Firebase Console. Registrando sesión de pruebas activa...");
-        setUser({ email: cleanEmail, uid: `user-${Date.now()}`, isMock: true });
-        return;
-      }
-      throw error;
-    }
+    await createUserWithEmailAndPassword(auth, cleanEmail, pass);
   };
 
   useEffect(() => {
