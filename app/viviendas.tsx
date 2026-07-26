@@ -38,7 +38,7 @@ export default function ViviendasSegurasScreen() {
       return;
     }
     
-    const newId = `nodo_${Math.random().toString(36).substring(2, 8)}`;
+    const newId = `nodo_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     
     // Alerta obligatoria de creación de perfil de la casa
     Alert.alert(

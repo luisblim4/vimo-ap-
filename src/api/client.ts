@@ -1,3 +1,4 @@
+import { auth } from "../../app/firebaseConfig";
 import { getToken } from "../utils/token";
 
 const BASE = (process.env.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_API_URL || "").replace(/\/$/, "");
@@ -5,16 +6,30 @@ const BASE = (process.env.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_API
 async function request<T = any>(
   path: string,
   options: RequestInit = {},
-  auth = true
+  useAuthToken = true
 ): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string> | undefined),
   };
-  if (auth) {
-    const token = await getToken();
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  if (useAuthToken) {
+    // 🔐 IDENTIDAD FEDERADA: Intentar obtener el ID Token fresco de Firebase Auth
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      try {
+        const firebaseIdToken = await currentUser.getIdToken(true);
+        headers["Authorization"] = `Bearer ${firebaseIdToken}`;
+      } catch (err) {
+        console.log("Error al extraer Firebase ID Token:", err);
+      }
+    } else {
+      // Fallback a token local si no hay usuario en Firebase
+      const token = await getToken();
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+    }
   }
+
   const res = await fetch(`${BASE}/api${path}`, { ...options, headers });
   const text = await res.text();
   let data: any = null;
@@ -101,7 +116,7 @@ export const api = {
   createDevice: (name: string) => {
     if (!BASE) {
       const d = {
-        id: `dev_${Math.random().toString(36).substring(2, 9)}`,
+        id: `dev_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         name: name.trim() || "VIMO S3",
         api_key: "mock-key-123",
         online: true,
