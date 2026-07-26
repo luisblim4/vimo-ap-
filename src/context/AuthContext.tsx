@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, ReactNode, useContext } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from '../../app/firebaseConfig';
 
 const ENABLE_DEV_MOCK = process.env.EXPO_PUBLIC_DEV_MOCK === 'true';
@@ -9,6 +10,7 @@ export interface MockUser {
   email: string;
   uid: string;
   isMock: true;
+  isOffline?: boolean;
 }
 
 export type AuthUser = User | MockUser | null;
@@ -27,53 +29,58 @@ export const AuthContext = createContext<AuthContextType>({
   register: async () => {} 
 });
 
-// 🚀 CUSTOM HOOK: La forma limpia de consumir el contexto
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // ==================================================
+  // 🔐 LOGIN GARANTIZADO
+  // ==================================================
   const login = async (email: string, pass: string) => {
     const cleanEmail = email.trim().toLowerCase();
     try {
       await signInWithEmailAndPassword(auth, cleanEmail, pass);
-    } catch (err: any) {
-      console.log("Firebase login attempt error:", err?.code || err);
-      // Fallback seguro: Si es un correo de pruebas/operador/admin o la cuenta no existe en Firebase Auth aún
-      const isOperatorOrAdmin = 
-        cleanEmail.includes('admin') || 
-        cleanEmail.includes('vimo') || 
-        cleanEmail.includes('operator') || 
-        cleanEmail.includes('demo') ||
-        cleanEmail === 'admin@museo.com';
-
-      if (isOperatorOrAdmin || err?.code === 'auth/user-not-found' || err?.code === 'auth/invalid-credential') {
-        try {
-          // Intentar crearlo en Firebase Auth automáticamente
-          await createUserWithEmailAndPassword(auth, cleanEmail, pass);
-          return;
-        } catch (createErr) {
-          // Si ya existe o hay restricciones, establecer la sesión mock activa para no bloquear la app
-          setUser({ email: cleanEmail, uid: `mock-user-${Date.now()}`, isMock: true });
-          return;
-        }
+    } catch (error: any) {
+      console.log("Fallo en login Firebase:", error?.message || error);
+      // Fallback Offline: Revisa si hay red caída o timeout
+      const isNetworkErr = error?.message?.includes('network') || error?.message?.includes('fetch') || error?.code === 'auth/network-request-failed';
+      if (isNetworkErr) {
+        console.log("Habilitando sesión Offline de emergencia...");
+        const offlineUser = { email: cleanEmail, uid: `offline-${Date.now()}`, isMock: true, isOffline: true };
+        await AsyncStorage.setItem('@vimo_offline_session', JSON.stringify(offlineUser));
+        setUser(offlineUser as any);
+      } else {
+        throw error; // Lanza el error real (contraseña incorrecta, etc) a la UI
       }
-      throw err;
     }
   };
 
+  // ==================================================
+  // 📝 REGISTRO GARANTIZADO (Auto-Login & Offline)
+  // ==================================================
   const register = async (email: string, pass: string) => {
     const cleanEmail = email.trim().toLowerCase();
     try {
       await createUserWithEmailAndPassword(auth, cleanEmail, pass);
-    } catch (err: any) {
-      if (err?.code === 'auth/email-already-in-use') {
-        // Si ya está registrado, intentar hacer login automático
-        await signInWithEmailAndPassword(auth, cleanEmail, pass);
-        return;
+    } catch (error: any) {
+      console.log("Fallo en registro Firebase:", error?.message || error);
+      
+      // Auto-Login si el correo ya está en uso
+      if (error?.code === 'auth/email-already-in-use') {
+        console.log("El correo ya existe. Forzando Auto-Login...");
+        await login(cleanEmail, pass); 
+      } 
+      // Fallback Offline si falla la red
+      else if (error?.message?.includes('network') || error?.message?.includes('fetch') || error?.code === 'auth/network-request-failed') {
+        console.log("Habilitando sesión Offline de emergencia en Registro...");
+        const offlineUser = { email: cleanEmail, uid: `offline-${Date.now()}`, isMock: true, isOffline: true };
+        await AsyncStorage.setItem('@vimo_offline_session', JSON.stringify(offlineUser));
+        setUser(offlineUser as any);
+      } else {
+        throw error;
       }
-      throw err;
     }
   };
 
@@ -84,9 +91,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setIsLoading(false);
+    const checkOfflineSession = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('@vimo_offline_session');
+        if (stored) {
+          setUser(JSON.parse(stored));
+          setIsLoading(false);
+          return true; // Hay sesión offline
+        }
+      } catch (e) {
+        console.log("Error leyendo sesión offline", e);
+      }
+      return false;
+    };
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        setIsLoading(false);
+      } else {
+        // Si Firebase dice que no hay sesión, comprobamos el fallback offline
+        const hasOffline = await checkOfflineSession();
+        if (!hasOffline) {
+          setUser(null);
+          setIsLoading(false);
+        }
+      }
     });
 
     return () => unsubscribe();
@@ -102,9 +132,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{ user, isLoading, login, register }}>
-      {ENABLE_DEV_MOCK && (
+      {(ENABLE_DEV_MOCK || (user as any)?.isOffline) && (
         <View style={styles.mockBanner}>
-          <Text style={styles.mockBannerText}>⚠️ MODO MOCK ACTIVO - PRUEBAS LOCALES</Text>
+          <Text style={styles.mockBannerText}>
+            {(user as any)?.isOffline ? "⚠️ MODO OFFLINE ACTIVO - RED CAÍDA" : "⚠️ MODO MOCK ACTIVO - PRUEBAS LOCALES"}
+          </Text>
         </View>
       )}
       {children}

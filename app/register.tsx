@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../src/context/AuthContext';
+import { useAuth } from '../src/context/AuthContext'; 
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -27,12 +27,14 @@ export default function RegisterScreen() {
       await register(email, password);
       router.replace('/selector'); 
     } catch (err: any) {
-      if (err.code === 'auth/email-already-in-use') {
-        setError('Este correo ya está registrado.');
-      } else if (err.code === 'auth/weak-password') {
+      console.log("Error UI Registro:", err?.message || err);
+      
+      if (err.code === 'auth/weak-password') {
         setError('La contraseña debe tener al menos 6 caracteres.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('El formato del correo es inválido.');
       } else {
-        setError('Error al crear la cuenta. Verifica tus datos.');
+        setError(`Error: ${err?.message || "No se pudo registrar la cuenta. Verifica tus datos."}`);
       }
     } finally {
       setLoading(false);

@@ -27,11 +27,11 @@ export default function LoginGeneralScreen() {
       await login(email, password);
       router.replace('/selector'); 
     } catch (err: any) {
-      console.log("Login error:", err);
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+      console.log("Error UI Login:", err);
+      if (err?.code === 'auth/invalid-credential' || err?.code === 'auth/user-not-found' || err?.code === 'auth/wrong-password') {
         setError('Correo o contraseña incorrectos.');
       } else {
-        setError('Ocurrió un error al iniciar sesión. Intenta de nuevo.');
+        setError(err?.message ? `Error: ${err.message}` : 'Ocurrió un error al iniciar sesión. Intenta de nuevo.');
       }
     } finally {
       setLoading(false);

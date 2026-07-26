@@ -1,8 +1,8 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Credenciales de Firebase Vimo S3 con soporte para variables de entorno y fallback
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyBsL4cSeWJPP24FKuukznQV8wdxKu2ISEA",
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || "vimo-s3.firebaseapp.com",
@@ -12,8 +12,11 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || "1:66991987954:web:d55bf63054703e8ae5c46b",
 };
 
-// Patrón Singleton para evitar inicializar Firebase múltiples veces en React Native
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-export const auth = getAuth(app);
+// 🔥 LA MAGIA: Persistencia nativa para evitar que las credenciales se evaporen
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage)
+});
+
 export const db = getFirestore(app);
