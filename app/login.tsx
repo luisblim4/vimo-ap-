@@ -1,159 +1,66 @@
-import React, { useState } from "react";
-import {
-  View, Text, TextInput, Pressable, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Link, useRouter } from "expo-router";
-import { useAuth } from "@/src/context/AuthContext";
-import { colors, spacing, radius, fontFamily } from "@/src/theme";
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../src/context/AuthContext'; // 🟢 Consumo Limpio
 
-export default function Login() {
-  const { login } = useAuth();
+export default function LoginGeneralScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { login } = useAuth(); 
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async () => {
-    setError(null);
+    if (!email || !password) {
+      setError('Por favor, ingresa tu correo y contraseña.');
+      return;
+    }
+
     setLoading(true);
+    setError(null);
+
     try {
-      await login(email.trim(), password);
-      router.replace("/selector");
-    } catch (e: any) {
-      setError(e?.message || "Error al iniciar sesión");
+      await login(email, password);
+      router.replace('/selector'); 
+    } catch (err: any) {
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError('Correo o contraseña incorrectos.');
+      } else {
+        setError('Ocurrió un error al iniciar sesión. Intenta de nuevo.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <View style={styles.container} testID="login-screen">
-          <View style={styles.brandWrap}>
-            <Text style={styles.brandMark}>VIMO S3</Text>
-            <Text style={styles.brandSub}>SECURITY OPS · COMMAND CENTER</Text>
-          </View>
+    <View style={styles.container}>
+      <Text style={styles.title}>Bienvenido a Viviendas Seguras</Text>
+      
+      {error && <Text style={styles.errorText}>{error}</Text>}
 
-          <View style={styles.form}>
-            <Text style={styles.label}>EMAIL</Text>
-            <TextInput
-              testID="login-email-input"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholder="operator@vimo.io"
-              placeholderTextColor={colors.onSurfaceSecondary}
-              style={styles.input}
-            />
+      <TextInput style={styles.input} placeholder="Correo electrónico" placeholderTextColor="#666" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+      <TextInput style={styles.input} placeholder="Contraseña" placeholderTextColor="#666" value={password} onChangeText={setPassword} secureTextEntry />
 
-            <Text style={[styles.label, { marginTop: spacing.lg }]}>PASSWORD</Text>
-            <TextInput
-              testID="login-password-input"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              placeholder="••••••••"
-              placeholderTextColor={colors.onSurfaceSecondary}
-              style={styles.input}
-            />
+      <TouchableOpacity style={styles.button} onPress={onSubmit} disabled={loading}>
+        {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.buttonText}>INICIAR SESIÓN</Text>}
+      </TouchableOpacity>
 
-            {error ? <Text style={styles.error} testID="login-error">{error}</Text> : null}
-
-            <Pressable
-              testID="login-submit-button"
-              onPress={onSubmit}
-              disabled={loading || !email || !password}
-              style={({ pressed }) => [
-                styles.btn,
-                (loading || !email || !password) && { opacity: 0.5 },
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.btnText}>INICIAR SESIÓN</Text>
-              )}
-            </Pressable>
-
-            <Link href="/register" asChild>
-              <Pressable testID="goto-register" style={styles.linkRow}>
-                <Text style={styles.linkText}>
-                  ¿No tienes cuenta? <Text style={styles.linkAccent}>Regístrate</Text>
-                </Text>
-              </Pressable>
-            </Link>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      <TouchableOpacity onPress={() => router.push('/register')} style={{ marginTop: 20 }}>
+        <Text style={styles.linkText}>¿No tienes cuenta? Crea una aquí</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.surface },
-  container: { flex: 1, paddingHorizontal: spacing.xl, justifyContent: "center" },
-  brandWrap: { alignItems: "center", marginBottom: spacing["3xl"] },
-  brandMark: {
-    fontFamily: fontFamily.displayBold,
-    fontSize: 48,
-    color: colors.onSurface,
-    letterSpacing: 4,
-  },
-  brandSub: {
-    fontFamily: fontFamily.text,
-    fontSize: 11,
-    color: colors.onSurfaceSecondary,
-    letterSpacing: 2,
-    marginTop: spacing.xs,
-  },
-  form: {},
-  label: {
-    fontFamily: fontFamily.displayBold,
-    fontSize: 11,
-    letterSpacing: 1.5,
-    color: colors.onSurfaceSecondary,
-    marginBottom: spacing.sm,
-  },
-  input: {
-    backgroundColor: colors.surfaceSecondary,
-    borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.onSurface,
-    fontFamily: fontFamily.text,
-    fontSize: 15,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-  },
-  error: {
-    fontFamily: fontFamily.text,
-    color: colors.error,
-    fontSize: 13,
-    marginTop: spacing.md,
-  },
-  btn: {
-    backgroundColor: colors.brand,
-    paddingVertical: spacing.md + 2,
-    borderRadius: radius.md,
-    alignItems: "center",
-    marginTop: spacing.xl,
-  },
-  btnText: {
-    color: "#fff",
-    fontFamily: fontFamily.displayBold,
-    fontSize: 15,
-    letterSpacing: 1.5,
-  },
-  linkRow: { alignItems: "center", paddingVertical: spacing.lg },
-  linkText: { color: colors.onSurfaceSecondary, fontFamily: fontFamily.text, fontSize: 13 },
-  linkAccent: { color: colors.brand, fontFamily: fontFamily.textBold },
+  container: { flex: 1, backgroundColor: '#121212', padding: 20, justifyContent: 'center' },
+  title: { fontSize: 24, color: '#fff', fontWeight: 'bold', textAlign: 'center', marginBottom: 30 },
+  input: { backgroundColor: '#1e1e1e', color: '#fff', padding: 15, borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#333' },
+  button: { backgroundColor: '#00ff00', padding: 15, borderRadius: 8, alignItems: 'center', marginTop: 10 },
+  buttonText: { color: '#000', fontWeight: 'bold', fontSize: 16 },
+  errorText: { color: '#ff4444', textAlign: 'center', marginBottom: 15 },
+  linkText: { color: '#00ff00', textAlign: 'center', fontSize: 14 }
 });

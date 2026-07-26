@@ -1,20 +1,18 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from './firebaseConfig';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../src/context/AuthContext'; // 🟢 Consumo Limpio
 
-const LoginScreen: React.FC = () => {
+export default function LoginScreen() {
   const router = useRouter();
-  
-  // 1. Tipamos los estados
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
+  const { login } = useAuth(); 
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 2. Tipamos las funciones asíncronas
-  const handleLogin = async (): Promise<void> => {
+  const handleLogin = async () => {
     if (!email || !password) {
       setError('Por favor llena todos los campos.');
       return;
@@ -24,10 +22,8 @@ const LoginScreen: React.FC = () => {
     setError(null);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // El AuthContext detectará el cambio y redirigirá automáticamente, 
-      // pero forzamos el avance al dashboard del museo:
-      router.replace('/HistorialScreen');
+      await login(email, password);
+      router.replace('/HistorialScreen'); 
     } catch (err: any) {
       setError('Credenciales inválidas o sin permisos de administrador.');
       Alert.alert('Error', 'Acceso denegado al sistema Guardián.');
@@ -43,35 +39,15 @@ const LoginScreen: React.FC = () => {
 
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      <TextInput
-        style={styles.input}
-        placeholder="Correo Institucional"
-        placeholderTextColor="#666"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Contraseña"
-        placeholderTextColor="#666"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+      <TextInput style={styles.input} placeholder="Correo Institucional" placeholderTextColor="#666" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+      <TextInput style={styles.input} placeholder="Contraseña" placeholderTextColor="#666" value={password} onChangeText={setPassword} secureTextEntry />
 
       <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-        {loading ? (
-          <ActivityIndicator color="#000" />
-        ) : (
-          <Text style={styles.buttonText}>Ingresar al Sistema</Text>
-        )}
+        {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.buttonText}>Ingresar al Sistema</Text>}
       </TouchableOpacity>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212', padding: 20, justifyContent: 'center' },
@@ -82,5 +58,3 @@ const styles = StyleSheet.create({
   buttonText: { color: '#000', fontWeight: 'bold', fontSize: 16 },
   errorText: { color: '#ff4444', textAlign: 'center', marginBottom: 15 },
 });
-
-export default LoginScreen;
