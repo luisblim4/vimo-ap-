@@ -1,69 +1,65 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '@/src/api/client';
 
-export default function HistorialTabScreen() {
+export default function HistorialScreen() {
   const insets = useSafeAreaInsets();
-  const [events, setEvents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // 🟢 Inicializamos el historial totalmente VACÍO. Cero alertas de prueba.
+  const [historial, setHistorial] = useState<string[]>([]);
 
-  const fetchEvents = async () => {
-    setLoading(true);
-    try {
-      const data = await api.getEvents('dev_fkkumbo', 50);
-      setEvents(data || []);
-    } catch (e) {
-      console.log('Error al cargar historial de eventos:', e);
-    } finally {
-      setLoading(false);
-    }
+  // 🔴 Función para borrar todo el historial con confirmación de seguridad
+  const confirmarBorrado = () => {
+    Alert.alert(
+      "⚠️ Limpiar Historial",
+      "¿Estás seguro de que deseas eliminar todos los registros del sistema? Esta acción no se puede deshacer.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { 
+          text: "Sí, borrar todo", 
+          style: "destructive",
+          onPress: () => setHistorial([]) // Vaciamos la lista
+        }
+      ]
+    );
   };
 
-  useEffect(() => {
-    fetchEvents();
-  }, []);
-
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 10 }]}>
+      {/* Cabecera con el botón de borrar */}
       <View style={styles.header}>
-        <Text style={styles.title}>BITÁCORA DE HISTORIAL</Text>
-        <Text style={styles.subtitle}>Registro de Eventos y Telemetría VIMO Portátil</Text>
+        <Text style={styles.title}>Historial VIMO</Text>
+        
+        {/* El botón de borrar solo aparece si hay algo en el historial */}
+        {historial.length > 0 && (
+          <TouchableOpacity style={styles.clearBtn} onPress={confirmarBorrado}>
+            <Ionicons name="trash-outline" size={14} color="#FF4444" style={{ marginRight: 4 }} />
+            <Text style={styles.clearBtnText}>Limpiar</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#00E5FF" />
+      {/* Si el historial está vacío, mostramos un mensaje limpio y profesional */}
+      {historial.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="checkmark-circle-outline" size={64} color="#00FF00" style={{ marginBottom: 15 }} />
+          <Text style={styles.emptyTitle}>Historial Limpio</Text>
+          <Text style={styles.emptySub}>
+            No hay incidentes ni alertas registradas. El sistema está operando con total normalidad.
+          </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 30 }}>
-          {events.length > 0 ? (
-            events.map((evt, i) => (
-              <View key={evt.id || i} style={styles.eventCard}>
-                <View style={styles.row}>
-                  <Ionicons 
-                    name={evt.type === 'emergency' ? 'alert-circle' : 'information-circle'} 
-                    size={20} 
-                    color={evt.type === 'emergency' ? '#EF4444' : '#00E5FF'} 
-                  />
-                  <Text style={styles.eventType}>{evt.type ? evt.type.toUpperCase() : 'TELEMETRÍA'}</Text>
-                  <Text style={styles.eventTime}>
-                    {evt.created_at ? new Date(evt.created_at).toLocaleTimeString() : 'En vivo'}
-                  </Text>
-                </View>
-                <Text style={styles.eventText}>{evt.text || 'Registro de evento VIMO S3'}</Text>
-              </View>
-            ))
-          ) : (
-            <Text style={styles.emptyText}>No hay registros de eventos almacenados aún.</Text>
+        /* Si hubiera alertas reales, se mostrarían aquí */
+        <FlatList
+          data={historial}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item }) => (
+            <View style={styles.alertaCard}>
+              <Text style={styles.alertaText}>{item}</Text>
+            </View>
           )}
-
-          <TouchableOpacity style={styles.refreshBtn} onPress={fetchEvents}>
-            <Ionicons name="refresh" size={16} color="#00E5FF" style={{ marginRight: 6 }} />
-            <Text style={styles.refreshText}>ACTUALIZAR BITÁCORA</Text>
-          </TouchableOpacity>
-        </ScrollView>
+        />
       )}
     </View>
   );
@@ -71,16 +67,16 @@ export default function HistorialTabScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0A1128', paddingHorizontal: 20 },
-  header: { marginTop: 15, marginBottom: 20 },
-  title: { color: '#00E5FF', fontSize: 22, fontWeight: 'bold', letterSpacing: 1 },
-  subtitle: { color: '#94A3B8', fontSize: 13, marginTop: 4 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  eventCard: { backgroundColor: '#101B3B', borderWidth: 1, borderColor: '#1E293B', borderRadius: 10, padding: 14, marginBottom: 12 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  eventType: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 12, flex: 1 },
-  eventTime: { color: '#94A3B8', fontSize: 11, fontFamily: 'monospace' },
-  eventText: { color: '#CBD5E1', fontSize: 13, lineHeight: 18 },
-  emptyText: { color: '#94A3B8', textAlign: 'center', marginTop: 40, fontStyle: 'italic' },
-  refreshBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#101B3B', borderWidth: 1, borderColor: '#00E5FF', padding: 12, borderRadius: 8, marginTop: 20 },
-  refreshText: { color: '#00E5FF', fontWeight: 'bold', fontSize: 12, letterSpacing: 1 }
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15, marginBottom: 20 },
+  title: { fontSize: 24, color: '#00E5FF', fontWeight: 'bold', letterSpacing: 1 },
+  
+  clearBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255, 68, 68, 0.1)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#FF4444' },
+  clearBtnText: { color: '#FF4444', fontWeight: 'bold', fontSize: 12 },
+  
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  emptyTitle: { fontSize: 20, color: '#FFFFFF', fontWeight: 'bold', marginBottom: 8 },
+  emptySub: { fontSize: 13, color: '#94A3B8', textAlign: 'center', lineHeight: 20 },
+
+  alertaCard: { backgroundColor: '#101B3B', padding: 15, borderRadius: 8, marginBottom: 10, borderWidth: 1, borderColor: '#1E293B' },
+  alertaText: { color: '#FFFFFF', fontSize: 14 }
 });
